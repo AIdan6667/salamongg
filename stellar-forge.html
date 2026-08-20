@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STELLAR FORGE — Апгрейдер скинов</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0a0b12;
+    --panel: #12141e;
+    --panel-2: #171a26;
+    --line: #262a3c;
+    --text: #edeef5;
+    --text-dim: #8a8ea3;
+
+    --nebula: #9b6bf2;
+    --nebula-glow: #b794f8;
+    --pulsar: #ec4899;
+    --pulsar-glow: #f9a8d4;
+    --supernova: #ef4444;
+    --supernova-glow: #fb9a8a;
+    --quasar: #f2c94c;
+    --quasar-glow: #fff2b8;
+
+    --cyan: #22d3ee;
+  }
+
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height:100vh;
+    overflow-x:hidden;
+    position:relative;
+  }
+
+  .stars, .stars2{
+    position:fixed; inset:0; z-index:0; pointer-events:none;
+    background-image:
+      radial-gradient(1.5px 1.5px at 20px 30px, #ffffff55, transparent),
+      radial-gradient(1.5px 1.5px at 140px 90px, #ffffff40, transparent),
+      radial-gradient(1px 1px at 90px 160px, #ffffff55, transparent),
+      radial-gradient(1.5px 1.5px at 220px 40px, #ffffff33, transparent),
+      radial-gradient(1px 1px at 260px 180px, #ffffff44, transparent),
+      radial-gradient(1.5px 1.5px at 320px 120px, #ffffff33, transparent);
+    background-repeat: repeat;
+    background-size: 360px 220px;
+    opacity:0.6;
+  }
+  .stars2{
+    background-size: 500px 300px;
+    background-position: 60px 80px;
+    opacity:0.35;
+    animation: drift 90s linear infinite;
+  }
+  @keyframes drift{ from{ transform:translateY(0);} to{ transform:translateY(-300px);} }
+
+  .app{ position:relative; z-index:1; max-width:1180px; margin:0 auto; padding:22px 20px 60px; }
+
+  header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding-bottom:18px; margin-bottom:22px;
+    border-bottom:1px solid var(--line);
+    flex-wrap:wrap; gap:14px;
+  }
+  .brand{ display:flex; flex-direction:column; }
+  .brand .mark{
+    font-family:'Rajdhani', sans-serif; font-weight:700; font-size:26px; letter-spacing:2px;
+    background:linear-gradient(90deg, var(--nebula-glow), var(--quasar));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .brand .tag{ font-size:12px; color:var(--text-dim); letter-spacing:0.5px; margin-top:2px;}
+
+  .hstats{ display:flex; gap:22px; align-items:center; }
+  .hstat{ text-align:right; }
+  .hstat .n{ font-family:'Rajdhani', sans-serif; font-weight:700; font-size:19px; }
+  .hstat .l{ font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; }
+  .reset-btn{
+    font-family:'Inter'; font-size:12px; color:var(--text-dim);
+    background:transparent; border:1px solid var(--line); padding:7px 12px; border-radius:8px;
+    cursor:pointer; transition:.15s;
+  }
+  .reset-btn:hover{ color:var(--text); border-color:var(--cyan); }
+
+  .grid{
+    display:grid;
+    grid-template-columns: 240px 1fr 240px;
+    gap:18px;
+    align-items:start;
+  }
+  @media (max-width: 900px){
+    .grid{ grid-template-columns:1fr; }
+  }
+
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:16px;
+  }
+  .panel h2{
+    font-family:'Rajdhani'; font-weight:600; font-size:14px; letter-spacing:1.5px;
+    text-transform:uppercase; color:var(--text-dim); margin-bottom:12px;
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .panel h2 span.count{ color:var(--cyan); font-family:'Inter'; font-weight:600; font-size:12px; }
+
+  .skin-list{
+    display:grid; grid-template-columns:1fr 1fr; gap:10px;
+    max-height:560px; overflow-y:auto; padding-right:2px;
+  }
+  .skin-list::-webkit-scrollbar{ width:5px; }
+  .skin-list::-webkit-scrollbar-thumb{ background:var(--line); border-radius:4px; }
+
+  .skin-card{
+    position:relative; border-radius:10px; padding:9px 8px 8px;
+    border:1.5px solid var(--line);
+    cursor:pointer; transition:.15s; overflow:hidden;
+    background:var(--panel-2);
+  }
+  .skin-card:hover{ transform:translateY(-2px); border-color:#3a3f57; }
+  .skin-card.selected{ border-color: var(--cyan); box-shadow:0 0 0 1px var(--cyan), 0 0 14px -2px var(--cyan); }
+  .skin-card.static{ cursor:default; }
+  .skin-card.static:hover{ transform:none; border-color:var(--line); }
+  .skin-card.disabled{ opacity:.35; cursor:not-allowed; pointer-events:none; }
+
+  .swatch{
+    height:52px; border-radius:7px; margin-bottom:7px; position:relative; overflow:hidden;
+  }
+  .swatch::after{
+    content:""; position:absolute; inset:0;
+    background:repeating-linear-gradient(115deg, rgba(255,255,255,0.10) 0 2px, transparent 2px 9px);
+    mix-blend-mode:overlay;
+  }
+  .skin-name{ font-size:11.5px; font-weight:600; line-height:1.25; }
+  .skin-meta{ display:flex; justify-content:space-between; align-items:center; margin-top:5px; }
+  .weapon-tag{ font-size:9px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.5px; }
+  .value-tag{ font-family:'Rajdhani'; font-weight:700; font-size:12px; }
+
+  .tier-nebula .swatch{ background:linear-gradient(135deg,#5b2fbf,#a97af0 60%,#d9c2ff); }
+  .tier-nebula .value-tag{ color:var(--nebula-glow); }
+  .tier-pulsar .swatch{ background:linear-gradient(135deg,#a3186b,#ec4899 55%,#ffc2e0); }
+  .tier-pulsar .value-tag{ color:var(--pulsar-glow); }
+  .tier-supernova .swatch{ background:linear-gradient(135deg,#8f1e12,#ef4444 55%,#ffcaa8); }
+  .tier-supernova .value-tag{ color:var(--supernova-glow); }
+  .tier-quasar .swatch{ background:linear-gradient(135deg,#8a6a05,#f2c94c 55%,#fff8dc); }
+  .tier-quasar .value-tag{ color:var(--quasar); }
+
+  .tier-pill{
+    position:absolute; top:6px; right:6px; font-size:8px; padding:2px 6px; border-radius:20px;
+    text-transform:uppercase; letter-spacing:.5px; font-weight:600; backdrop-filter:blur(2px);
+  }
+  .tier-nebula .tier-pill{ background:#5b2fbf99; color:#e9d8ff; }
+  .tier-pulsar .tier-pill{ background:#a3186b99; color:#ffdcee; }
+  .tier-supernova .tier-pill{ background:#8f1e1299; color:#ffe2d4; }
+  .tier-quasar .tier-pill{ background:#8a6a0599; color:#fff6d8; }
+
+  .empty-hint{ font-size:12px; color:var(--text-dim); padding:18px 4px; text-align:center; line-height:1.5; }
+
+  .arena{ display:flex; flex-direction:column; align-items:center; gap:16px; padding:26px 16px; }
+
+  .duel{ display:flex; align-items:center; gap:14px; width:100%; justify-content:center; }
+  .duel .slot{
+    width:110px; height:110px; border-radius:12px; border:1.5px dashed var(--line);
+    display:flex; align-items:center; justify-content:center; flex-direction:column; gap:4px;
+    background:var(--panel-2); text-align:center; padding:8px; transition:.2s;
+  }
+  .duel .slot.filled{ border-style:solid; }
+  .duel .slot .lbl{ font-size:9px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.5px; }
+  .duel .slot .nm{ font-size:10.5px; font-weight:600; line-height:1.2; }
+  .duel .slot .mystery{ font-family:'Rajdhani'; font-size:30px; font-weight:700; color:var(--text-dim); }
+  .duel .arrow{ font-family:'Rajdhani'; font-size:22px; color:var(--text-dim); }
+
+  .wheel-wrap{ position:relative; width:270px; height:270px; margin:6px 0 4px; }
+  .wheel{
+    width:100%; height:100%; border-radius:50%;
+    border: 5px solid #1c1f2c;
+    box-shadow: inset 0 0 30px #000000aa, 0 0 40px -8px #00000090;
+    background:#1a1c28;
+    position:relative;
+  }
+  .needle-pivot{
+    position:absolute; inset:0; z-index:4;
+    transition: transform 3.4s cubic-bezier(.12,.85,.15,1);
+  }
+  .needle-arm{
+    position:absolute; left:50%; top:50%; width:5px; height:120px;
+    background:linear-gradient(to top, var(--cyan), #eafcff);
+    transform: translate(-50%,-100%);
+    transform-origin: 50% 100%;
+    border-radius:3px;
+    box-shadow:0 0 10px var(--cyan);
+  }
+  .needle-arm::after{
+    content:""; position:absolute; top:-14px; left:50%; transform:translateX(-50%);
+    width:0; height:0; border-left:8px solid transparent; border-right:8px solid transparent;
+    border-bottom:16px solid var(--cyan); filter:drop-shadow(0 0 6px var(--cyan));
+  }
+  .needle-center-dot{
+    position:absolute; left:50%; top:50%; width:16px; height:16px; background:var(--cyan);
+    border-radius:50%; transform:translate(-50%,-50%); box-shadow:0 0 10px var(--cyan); z-index:5;
+  }
+  .wheel-hub{
+    position:absolute; top:50%; left:50%; width:86px; height:86px; transform:translate(-50%,-50%);
+    background:var(--panel); border:2px solid var(--line); border-radius:50%;
+    display:flex; align-items:center; justify-content:center; flex-direction:column;
+    z-index:3;
+  }
+  .wheel-hub .pct{ font-family:'Rajdhani'; font-weight:700; font-size:20px; }
+  .wheel-hub .pct-lbl{ font-size:8px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.5px; }
+
+  .bet-row{ display:flex; gap:10px; width:100%; justify-content:center; flex-wrap:wrap; }
+  .bet-btn{
+    font-family:'Rajdhani'; font-weight:700; font-size:14px; letter-spacing:.5px;
+    padding:11px 16px; border-radius:10px; cursor:pointer; text-align:center;
+    background:var(--panel-2); border:1.5px solid var(--line); color:var(--text);
+    transition:.15s; min-width:110px;
+  }
+  .bet-btn .pct{ font-size:18px; display:block; }
+  .bet-btn .tier{ font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.5px; color:var(--text-dim); margin-top:2px; }
+  .bet-btn:hover:not(:disabled){ transform:translateY(-2px); }
+  .bet-btn.b-nebula:hover:not(:disabled){ border-color:var(--nebula); box-shadow:0 0 16px -4px var(--nebula); }
+  .bet-btn.b-pulsar:hover:not(:disabled){ border-color:var(--pulsar); box-shadow:0 0 16px -4px var(--pulsar); }
+  .bet-btn.b-supernova:hover:not(:disabled){ border-color:var(--supernova); box-shadow:0 0 16px -4px var(--supernova); }
+  .bet-btn.b-quasar:hover:not(:disabled){ border-color:var(--quasar); box-shadow:0 0 16px -4px var(--quasar); }
+  .bet-btn:disabled{ opacity:.3; cursor:not-allowed; }
+
+  .odds-line{ font-size:12px; color:var(--text-dim); text-align:center; min-height:16px; }
+
+  .result-banner{
+    min-height:20px; font-family:'Rajdhani'; font-weight:700; font-size:14px; letter-spacing:.5px;
+    text-transform:uppercase; text-align:center; opacity:0; transition:opacity .3s;
+  }
+  .result-banner.show{ opacity:1; }
+  .result-banner.win{ color: var(--quasar); text-shadow:0 0 14px var(--quasar); }
+  .result-banner.lose{ color: var(--supernova); text-shadow:0 0 14px var(--supernova); }
+
+  .empty-overlay{
+    display:none; flex-direction:column; align-items:center; gap:14px; text-align:center;
+    padding:30px 10px;
+  }
+  .empty-overlay h3{ font-family:'Rajdhani'; font-size:18px; }
+  .empty-overlay p{ font-size:12.5px; color:var(--text-dim); max-width:260px; }
+  .empty-overlay .spin-btn{
+    font-family:'Rajdhani'; font-weight:700; font-size:15px; letter-spacing:1px;
+    padding:12px 30px; border-radius:10px; border:none; cursor:pointer;
+    background:linear-gradient(90deg, var(--cyan), #6ee7f5); color:#04222a; text-transform:uppercase;
+  }
+
+  footer{
+    margin-top:30px; text-align:center; font-size:11px; color:#575b6e;
+    padding-top:18px; border-top:1px solid var(--line);
+  }
+
+  @keyframes shake{
+    0%,100%{transform:translateX(0);} 20%{transform:translateX(-6px);} 40%{transform:translateX(6px);}
+    60%{transform:translateX(-4px);} 80%{transform:translateX(4px);}
+  }
+  .shake{ animation:shake .4s; }
+
+  @keyframes popglow{
+    0%{ box-shadow:0 0 0 0 var(--quasar); }
+    60%{ box-shadow:0 0 30px 6px var(--quasar); }
+    100%{ box-shadow:0 0 0 0 transparent; }
+  }
+  .win-flash{ animation:popglow .9s ease-out; }
+</style>
+</head>
+<body>
+
+<div class="stars"></div>
+<div class="stars2"></div>
+
+<div class="app">
+
+  <header>
+    <div class="brand">
+      <div class="mark">STELLAR FORGE</div>
+      <div class="tag">Куй редкость среди звёзд — демо-апгрейдер, без реальных денег</div>
+    </div>
+    <div class="hstats">
+      <div class="hstat">
+        <div class="n" id="statCount">1</div>
+        <div class="l">Скинов</div>
+      </div>
+      <div class="hstat">
+        <div class="n" id="statValue">0</div>
+        <div class="l">Общая ценность</div>
+      </div>
+      <button class="reset-btn" id="resetBtn">Сбросить инвентарь</button>
+    </div>
+  </header>
+
+  <div class="grid">
+
+    <div class="panel">
+      <h2>Твои скины <span class="count" id="invCount">1</span></h2>
+      <div class="skin-list" id="inventoryList"></div>
+    </div>
+
+    <div class="panel">
+      <div class="arena">
+
+        <div class="duel">
+          <div class="slot" id="sourceSlot"><div class="lbl">Ставишь</div></div>
+          <div class="arrow">→</div>
+          <div class="slot" id="targetSlot"><div class="lbl">Получаешь</div></div>
+        </div>
+
+        <div class="wheel-wrap">
+          <div class="wheel" id="wheel">
+            <div class="needle-pivot" id="needlePivot">
+              <div class="needle-arm"></div>
+            </div>
+            <div class="needle-center-dot"></div>
+            <div class="wheel-hub">
+              <div class="pct" id="hubPct">—</div>
+              <div class="pct-lbl">шанс</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="odds-line" id="oddsLine">Выбери свой скин слева, затем шанс улучшения</div>
+        <div class="bet-row" id="betRow"></div>
+        <div class="result-banner" id="resultBanner"></div>
+
+        <div class="empty-overlay" id="emptyOverlay">
+          <h3>Скины закончились</h3>
+          <p>Ты потерял последний скин в апгрейде. Получи новый стартовый Nebula-скин, чтобы продолжить.</p>
+          <button class="spin-btn" id="claimBtn">Получить Nebula-скин</button>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Возможные награды <span class="count" id="poolCount">0</span></h2>
+      <div class="skin-list" id="poolList"></div>
+    </div>
+
+  </div>
+
+  <footer>Все скины и названия вымышлены. Демо-версия для развлечения — покупки и реальные деньги отсутствуют.</footer>
+
+</div>
+
+<script>
+  const TIERS = ['nebula','pulsar','supernova','quasar'];
+  const TIER_LABEL = { nebula:'Nebula', pulsar:'Pulsar', supernova:'Supernova', quasar:'Quasar' };
+  const WEAPONS = ['Rifle','Pistol','SMG','Sniper','Shotgun','Knife'];
+  const BET_CHANCES = [75, 55, 35];
+
+  const NAME_POOL = {
+    nebula: ['Violet Drift','Ultraviolet Haze','Amethyst Circuit','Plum Vortex','Indigo Fracture','Orchid Static','Grape Pulse','Lilac Edge'],
+    pulsar: ['Magenta Bloom','Fuchsia Surge','Rose Quartz','Neon Flamingo','Blush Circuit','Sakura Storm','Pink Lightning','Hot Static'],
+    supernova: ['Crimson Inferno','Blood Moon','Scarlet Fracture','Ember Core','Ruby Cascade','Garnet Wave','Vermillion Surge','Solar Wound'],
+    quasar: ['Golden Dragon','Radiant Phoenix','Imperial Crown','Solar Flare','Ancient Relic','Eternal Blaze']
+  };
+
+  const VALUE_RANGE = {
+    nebula: [80, 140],
+    pulsar: [220, 420],
+    supernova: [560, 1000],
+    quasar: [1500, 3200]
+  };
+
+  function rand(min, max){ return Math.floor(Math.random()*(max-min+1))+min; }
+  function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+  function uid(){ return Math.random().toString(36).slice(2,9); }
+
+  let catalog = [];
+  TIERS.forEach(tier=>{
+    NAME_POOL[tier].forEach((name,i)=>{
+      catalog.push({
+        catId: tier+'-'+i,
+        tier,
+        name,
+        weapon: WEAPONS[i % WEAPONS.length],
+        value: rand(VALUE_RANGE[tier][0], VALUE_RANGE[tier][1])
+      });
+    });
+  });
+
+  function tierIndex(t){ return TIERS.indexOf(t); }
+
+  let inventory = [];
+  let selectedSourceId = null;
+  let spinning = false;
+  let wheelRotation = 0;
+
+  function newOwnedSkin(catEntry){ return { ownId: uid(), ...catEntry }; }
+  function giveStarterSkin(){
+    const c = pick(catalog.filter(c=>c.tier==='nebula'));
+    inventory.push(newOwnedSkin(c));
+  }
+  giveStarterSkin();
+
+  const invList = document.getElementById('inventoryList');
+  const poolList = document.getElementById('poolList');
+  const invCount = document.getElementById('invCount');
+  const poolCount = document.getElementById('poolCount');
+  const statCount = document.getElementById('statCount');
+  const statValue = document.getElementById('statValue');
+  const sourceSlot = document.getElementById('sourceSlot');
+  const targetSlot = document.getElementById('targetSlot');
+  const oddsLine = document.getElementById('oddsLine');
+  const betRow = document.getElementById('betRow');
+  const hubPct = document.getElementById('hubPct');
+  const needlePivot = document.getElementById('needlePivot');
+  const wheelEl = document.getElementById('wheel');
+  const resultBanner = document.getElementById('resultBanner');
+  const emptyOverlay = document.getElementById('emptyOverlay');
+
+  function skinCardHTML(s, opts){
+    opts = opts || {};
+    const selected = opts.selectedId && s.ownId===opts.selectedId;
+    const staticCls = opts.staticCard ? 'static' : '';
+    return `<div class="skin-card ${staticCls} tier-${s.tier} ${selected?'selected':''}" data-id="${opts.idKey==='ownId'?s.ownId:s.catId}">
+      <div class="tier-pill">${TIER_LABEL[s.tier]}</div>
+      <div class="swatch"></div>
+      <div class="skin-name">${s.weapon} — ${s.name}</div>
+      <div class="skin-meta">
+        <span class="weapon-tag">${s.weapon}</span>
+        <span class="value-tag">${s.value}</span>
+      </div>
+    </div>`;
+  }
+
+  function renderInventory(){
+    invCount.textContent = inventory.length;
+    statCount.textContent = inventory.length;
+    statValue.textContent = inventory.reduce((a,s)=>a+s.value,0);
+
+    if(inventory.length===0){
+      invList.innerHTML = `<div class="empty-hint" style="grid-column:1/-1;">Инвентарь пуст</div>`;
+    } else {
+      invList.innerHTML = inventory.map(s=>skinCardHTML(s,{idKey:'ownId', selectedId:selectedSourceId})).join('');
+    }
+
+    invList.querySelectorAll('.skin-card').forEach(card=>{
+      card.addEventListener('click', ()=>{
+        if(spinning) return;
+        selectedSourceId = card.dataset.id;
+        renderInventory();
+        renderBetRow();
+        updateArena();
+      });
+    });
+
+    emptyOverlay.style.display = inventory.length===0 ? 'flex' : 'none';
+    ['.duel','.wheel-wrap','.odds-line','.bet-row'].forEach(sel=>{
+      document.querySelector(sel).style.display = inventory.length===0 ? 'none' : (sel==='.bet-row'?'flex':'flex');
+    });
+  }
+
+  function renderPool(tier){
+    if(!tier){
+      poolList.innerHTML = `<div class="empty-hint" style="grid-column:1/-1;">Наведи на кнопку шанса, чтобы увидеть возможные скины</div>`;
+      poolCount.textContent = 0;
+      return;
+    }
+    const items = catalog.filter(c=>c.tier===tier);
+    poolCount.textContent = items.length;
+    poolList.innerHTML = items.map(s=>skinCardHTML(s,{idKey:'catId', staticCard:true})).join('');
+  }
+
+  function renderBetRow(){
+    const source = inventory.find(s=>s.ownId===selectedSourceId);
+    if(!source){
+      betRow.innerHTML = '';
+      oddsLine.textContent = 'Выбери свой скин слева, затем шанс улучшения';
+      renderPool(null);
+      return;
+    }
+    const higherTiers = TIERS.slice(tierIndex(source.tier)+1);
+    if(higherTiers.length===0){
+      betRow.innerHTML = `<div class="empty-hint">Это уже максимальная редкость — Quasar</div>`;
+      oddsLine.textContent = 'Выше некуда — попробуй другой скин';
+      renderPool(null);
+      return;
+    }
+    oddsLine.textContent = 'Выбери шанс улучшения — редкость награды растёт вместе с риском';
+    betRow.innerHTML = BET_CHANCES.map((chance,i)=>{
+      const tier = higherTiers[i];
+      if(!tier) return '';
+      return `<button class="bet-btn b-${tier}" data-chance="${chance}" data-tier="${tier}">
+        <span class="pct">${chance}%</span>
+        <span class="tier">${TIER_LABEL[tier]}</span>
+      </button>`;
+    }).join('');
+
+    betRow.querySelectorAll('.bet-btn').forEach(btn=>{
+      btn.addEventListener('mouseenter', ()=> renderPool(btn.dataset.tier));
+      btn.addEventListener('click', ()=>{
+        if(spinning) return;
+        startSpin(source, parseFloat(btn.dataset.chance), btn.dataset.tier);
+      });
+    });
+
+    renderPool(higherTiers[0]);
+  }
+
+  function updateArena(){
+    const source = inventory.find(s=>s.ownId===selectedSourceId);
+    sourceSlot.className = 'slot' + (source ? ' filled tier-'+source.tier : '');
+    sourceSlot.innerHTML = source
+      ? `<div class="lbl">Ставишь</div><div class="nm">${source.name}</div>`
+      : `<div class="lbl">Ставишь</div>`;
+
+    targetSlot.className = 'slot';
+    targetSlot.innerHTML = `<div class="lbl">Получаешь</div>`;
+
+    hubPct.textContent = '—';
+    wheelEl.style.background = '#1a1c28';
+    needlePivot.style.transition = 'none';
+    needlePivot.style.transform = `rotate(${wheelRotation}deg)`;
+    requestAnimationFrame(()=>{ needlePivot.style.transition = ''; });
+  }
+
+  function flashResult(text, cls){
+    resultBanner.textContent = text;
+    resultBanner.className = 'result-banner show ' + cls;
+    setTimeout(()=>{ resultBanner.classList.remove('show'); }, 2600);
+  }
+
+  function startSpin(source, chance, targetTier){
+    spinning = true;
+    betRow.querySelectorAll('.bet-btn').forEach(b=>b.disabled=true);
+    resultBanner.classList.remove('show');
+
+    targetSlot.className = 'slot filled tier-'+targetTier;
+    targetSlot.innerHTML = `<div class="lbl">Получаешь</div><div class="mystery">?</div>`;
+
+    hubPct.textContent = chance+'%';
+    const winDeg = chance*3.6;
+    wheelEl.style.background = `conic-gradient(from 0deg, var(--${targetTier}) 0deg, var(--${targetTier}-glow) ${winDeg*0.5}deg, var(--${targetTier}) ${winDeg}deg, #23263a ${winDeg}deg, #1a1c28 360deg)`;
+
+    const roll = Math.random()*100;
+    const win = roll < chance;
+
+    let targetAngle;
+    if(win){ targetAngle = Math.random()*winDeg; }
+    else{ targetAngle = winDeg + Math.random()*(360-winDeg); }
+
+    const fullSpins = 5 + Math.floor(Math.random()*2);
+    wheelRotation += fullSpins*360 + targetAngle;
+    needlePivot.style.transition = 'transform 3.4s cubic-bezier(.12,.85,.15,1)';
+    needlePivot.style.transform = `rotate(${wheelRotation}deg)`;
+
+    setTimeout(()=>{
+      inventory = inventory.filter(s=>s.ownId!==source.ownId);
+      if(win){
+        const rewardCat = pick(catalog.filter(c=>c.tier===targetTier));
+        inventory.push(newOwnedSkin(rewardCat));
+        targetSlot.innerHTML = `<div class="lbl">Получаешь</div><div class="nm">${rewardCat.name}</div>`;
+        flashResult('Успех! Получен '+rewardCat.name, 'win');
+        document.querySelector('.wheel-wrap').classList.add('win-flash');
+        setTimeout(()=>document.querySelector('.wheel-wrap').classList.remove('win-flash'),900);
+      } else {
+        targetSlot.innerHTML = `<div class="lbl">Получаешь</div><div class="nm" style="color:var(--supernova-glow)">Потерян</div>`;
+        flashResult('Неудача — скин потерян', 'lose');
+        document.querySelector('.arena').classList.add('shake');
+        setTimeout(()=>document.querySelector('.arena').classList.remove('shake'),400);
+      }
+      selectedSourceId = null;
+      spinning = false;
+      renderInventory();
+      renderBetRow();
+    }, 3500);
+  }
+
+  document.getElementById('claimBtn').addEventListener('click', ()=>{
+    giveStarterSkin();
+    renderInventory();
+    renderBetRow();
+    updateArena();
+  });
+
+  document.getElementById('resetBtn').addEventListener('click', ()=>{
+    if(spinning) return;
+    inventory = [];
+    selectedSourceId = null;
+    giveStarterSkin();
+    renderInventory();
+    renderBetRow();
+    updateArena();
+  });
+
+  renderInventory();
+  renderBetRow();
+  updateArena();
+</script>
+
+</body>
+</html>
